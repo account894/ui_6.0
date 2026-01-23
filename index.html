@@ -28,13 +28,20 @@
             <!-- 1. 설정 및 업로드 -->
             <div class="md:col-span-1 space-y-6">
 
-                <!-- 시트 선택 -->
+                <!-- 시트 선택 (10개로 확장됨) -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     <h2 class="text-lg font-semibold mb-4 text-slate-700">DB 시트 선택</h2>
-                    <select id="sheetSelect" class="w-full border border-slate-300 rounded-lg p-2">
+                    <select id="sheetSelect" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none">
                         <option value="BIGDATA">BIGDATA</option>
                         <option value="세한,진안,두리,선진금속 외5">세한,진안,두리,선진금속 외5</option>
                         <option value="ckw단가(업뎃예정)">ckw단가(업뎃예정)</option>
+                        <option value="Sheet4">Sheet4</option>
+                        <option value="Sheet5">Sheet5</option>
+                        <option value="Sheet6">Sheet6</option>
+                        <option value="Sheet7">Sheet7</option>
+                        <option value="Sheet8">Sheet8</option>
+                        <option value="Sheet9">Sheet9</option>
+                        <option value="Sheet10">Sheet10</option>
                     </select>
                     <div id="dbStatus" class="mt-2 text-sm text-amber-600">DB 상태: 로드 전</div>
                 </div>
@@ -87,9 +94,9 @@
     <!-- Worker Script -->
     <script id="worker-script" type="javascript/worker">
         const SYNONYM_MAP = {
-       "닥트": "덕트", "DUCT": "덕트", "배관": "관", "파이프": "관", "PIPE": "관","보온재": "보온", "관보온": "보온",
-    "발포폴리에틸렌": "발포", "고무발포": "발포", "가교발포": "발포", "난연": "아티론",
-    "은박": "매직테이프", "매직": "매직테이프","행거": "행가", "달대": "전산", "테프": "테이프","PUMP": "펌프", "TANK": "탱크", "GATE": "게이트", "S#": "SCH",
+            "닥트": "덕트", "DUCT": "덕트", "배관": "관", "파이프": "관", "PIPE": "관","보온재": "보온", "관보온": "보온",
+            "발포폴리에틸렌": "발포", "고무발포": "발포", "가교발포": "발포", "난연": "아티론",
+            "은박": "매직테이프", "매직": "매직테이프","행거": "행가", "달대": "전산", "테프": "테이프","PUMP": "펌프", "TANK": "탱크", "GATE": "게이트", "S#": "SCH",
             "PIPE":"관","파이프":"관","SPP":"강관","CARBON STEEL":"강관","흑관":"강관","백관":"강관",
             "SUS":"STS","STAINLESS":"STS","스텐":"STS","스테인리스":"STS","SU":"STS",
             "PVC":"PVC","VG1":"PVC","VG2":"PVC","COPPER":"동관","동파이프":"동관",
@@ -98,7 +105,7 @@
             "FITTING":"이음쇠","부속":"이음쇠","ELBOW":"엘보","ELL":"엘보",
             "TEE":"티","티이":"티","REDUCER":"레듀샤","RED":"레듀샤","이경소켓":"레듀샤",
             "SOCKET":"소켓","SOC":"소켓","COUPLING":"커플링",
-            "캡":"캡","CAP":"캡","마개":"캡","FLANGE":"플랜지","FLANGE":"플랜지",
+            "캡":"캡","CAP":"캡","마개":"캡","FLANGE":"플랜지",
             "UNION":"유니온","UN":"유니온","NIPPLE":"니플",
             "BUSHING":"부싱","BUSH":"부싱","ADAPTER":"아답타","M.A":"아답타","F.A":"아답타","ADPT":"아답타",
             "CROSS":"크로스","SADDLE":"새들","PLUG":"플러그","메꾸라":"플러그",
@@ -227,21 +234,12 @@
                     }
                 }
 
-                // 수정된 정렬 로직:
-                // 1. 유사도 점수(score) 내림차순이 최우선입니다.
-                // 2. 점수가 완전히 같을 경우에만 비고란(F열) 내림차순 정렬을 수행합니다.
                 candidates.sort((a, b) => {
-                    // 점수 비교 (1순위)
                     if (b.score !== a.score) return b.score - a.score;
-                    
-                    // 점수가 같을 경우 비고란(F열) 비교 (2순위)
                     let valA = String(a.item.F || "");
                     let valB = String(b.item.F || "");
-                    
-                    // 숫자 형태라면 숫자 비교, 아니면 문자열 비교
                     let numA = parseFloat(valA.replace(/[^0-9.-]/g, ''));
                     let numB = parseFloat(valB.replace(/[^0-9.-]/g, ''));
-                    
                     if (!isNaN(numA) && !isNaN(numB)) {
                         if (numB !== numA) return numB - numA; 
                     }
@@ -260,7 +258,6 @@
                         let status = `후보 ${idx + 1}`;
                         if (idx === 0 && topCandidates.length > 1) {
                             const gap = topCandidates[0].score - topCandidates[1].score;
-                            // 점수가 200미만(완전불일치)이거나 차이가 작을 때 충돌 표시
                             if (topCandidates[0].score < 200 && (gap < 10 || topCandidates[0].score < 50)) {
                                 status += " (충돌/검토필요)";
                             }
@@ -300,12 +297,12 @@
                     matchBtn.textContent = `⚡분석 중... ${percent}%`;
                 } else if(type === 'COMPLETE') {
                     resultRows = res;
-                    addLog(`매칭 프로세스 완료! (점수 우선 -> 비고 정렬 적용)`, 'success');
+                    addLog(`매칭 프로세스 완료! (정밀 정렬 알고리즘 적용)`, 'success');
                     matchBtn.disabled = false;
                     matchBtn.style.background = '';
                     matchBtn.textContent = '⚡매칭 실행';
                     downloadBtn.disabled = false;
-                    showMessage("분석 완료", `완료되었습니다.`);
+                    showMessage("분석 완료", `데이터 매칭 처리가 완료되었습니다.`);
                 }
             };
         }
@@ -338,14 +335,18 @@
 
         async function fetchDB(){
             const sheetName = sheetSelect.value;
+            // v6.0 전용 스프레드시트 ID 유지
             const SPREADSHEET_ID = "1F3HTL6rSOe1Xz30Z5YjS5eJhYvaqlHciMcxeLkQ7o2M";
             const DB_URL = `https://opensheet.elk.sh/${SPREADSHEET_ID}/${encodeURIComponent(sheetName)}`;
+            
             matchBtn.disabled = true;
             dbStatus.textContent = "데이터 로딩 중...";
+            
             try{
                 const res = await fetch(DB_URL);
                 if(!res.ok) throw new Error("네트워크 응답 오류");
                 const data = await res.json();
+                
                 dbRows = data.map(r => {
                     const keys = Object.keys(r);
                     return {
@@ -357,9 +358,10 @@
                         F: r["비고"] || r[keys[5]] || "" 
                     };
                 });
+                
                 dbStatus.innerHTML = `✓ DB 준비됨 (${dbRows.length}건)`;
                 dbStatus.className = "mt-2 text-sm text-emerald-600 font-semibold";
-                addLog(`DB 로드 성공: ${sheetName}`, 'success');
+                addLog(`DB 로드 성공: ${sheetName} (${dbRows.length}행)`, 'success');
                 if(csvRows.length > 0) matchBtn.disabled=false;
             } catch(err){
                 dbStatus.textContent = "DB 로드 실패";
@@ -382,7 +384,7 @@
                     const workbook = XLSX.read(data, {type:'array'});
                     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                     csvRows = XLSX.utils.sheet_to_json(worksheet, {header:1});
-                    addLog(`엑셀 데이터 로드 완료`, 'success');
+                    addLog(`엑셀 데이터 로드 완료 (${csvRows.length}행)`, 'success');
                     if(dbRows.length > 0) matchBtn.disabled=false;
                 } catch(err){ 
                     addLog("파일 오류: "+err.message, 'error'); 
@@ -404,16 +406,18 @@
         async function downloadExcel(){
             if(!resultRows || resultRows.length === 0) return;
             try {
-                addLog("결과 파일 생성 중...");
+                addLog("결과 파일 생성 중 (ExcelJS 스타일링 적용)...");
                 const workbook = new ExcelJS.Workbook();
                 const worksheet = workbook.addWorksheet('매칭결과');
                 const header = ["품명", "규격", "단위", "재료비", "노무비", "비고", "순위"];
                 const headerRow = worksheet.addRow(header);
+                
                 headerRow.eachCell((cell) => {
                     cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
                     cell.alignment = { vertical: 'middle', horizontal: 'center' };
                 });
+
                 resultRows.forEach(data => {
                     const row = worksheet.addRow(data);
                     const rank = data[6] || "";
@@ -429,10 +433,16 @@
                         });
                     }
                 });
-                worksheet.columns = [{ width: 32 }, { width: 22 }, { width: 10 }, { width: 15 }, { width: 15 }, { width: 40 }, { width: 20 }];
+
+                worksheet.columns = [
+                    { width: 32 }, { width: 22 }, { width: 10 }, 
+                    { width: 15 }, { width: 15 }, { width: 40 }, { width: 20 }
+                ];
+
                 const today = new Date();
                 const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '.');
-                const finalFileName = `${uploadedFileName}_${dateStr}.xlsx`;
+                const finalFileName = `${uploadedFileName}_매칭결과_${dateStr}.xlsx`;
+                
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 const url = window.URL.createObjectURL(blob);
@@ -447,5 +457,4 @@
         window.onload = fetchDB;
     </script>
 </body>
-
 </html>
